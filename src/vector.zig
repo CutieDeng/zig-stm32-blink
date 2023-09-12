@@ -23,7 +23,7 @@ extern fn pendSVHandler() void;
 extern fn sysTickHandler() void;
 
 // The vector table
-export const vector_table linksection(".vectors") = [_]?fn () callconv(.C) void{
+export const vector_table linksection(".vectors") = [_]?* const fn () callconv(.C) void{
     _stack,
     resetHandler, // Reset
     nmiHandler, // NMI
