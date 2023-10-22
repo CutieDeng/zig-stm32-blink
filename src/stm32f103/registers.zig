@@ -16,7 +16,7 @@ pub const GpioType = extern struct {
     lckr: u32,
 };
 
-pub fn gpio_address(comptime domain: GpioDomain) *volatile GpioType {
+pub fn gpio_address(domain: GpioDomain) *volatile GpioType {
     const r: *volatile GpioType = 
         switch (domain) {
             .A => @ptrFromInt(0x4001_0800),
@@ -30,21 +30,36 @@ pub fn gpio_address(comptime domain: GpioDomain) *volatile GpioType {
     return r; 
 }
 
-pub fn enable_gpio(comptime domain: GpioDomain) !void {
+pub const EnableGpioError = error {
+    GpioAlreadyEnabled, 
+};
+
+pub fn enable_gpio(domain: GpioDomain) EnableGpioError!void {
     const v = rcc_apb2_enr.*; 
-    const bit_idx = switch (domain) {
-        .A => 2, 
-        .B => 3, 
-        .C => 4, 
-        .D => 5, 
-        .E => 6, 
-        .F => @compileError("GPIO F not supported"),
-        .G => @compileError("GPIO G not supported"), 
-    };
-    const bit = 1 << bit_idx; 
+    const bit_idx : u5 = 
+        @intFromEnum(domain) + 2;
+    const bit = @as(u32, 1) << bit_idx;
     if ((v & bit) != 0) {
-        return error.GpioAlreadyEnabled; 
+        return EnableGpioError.GpioAlreadyEnabled; 
     }
     const w = v | bit; 
     rcc_apb2_enr.* = w;  
+}
+
+pub const Pin = struct {
+    port: GpioDomain,
+    pin: u4, 
+    pub fn write(self: Pin, comptime one: u1) void {
+        const value : u32 = @as(u32, 1) << self.pin; 
+        const value_write : u32 = if (one == 1) value else value << 16 ; 
+        const gpio = gpio_address(self.port); 
+        gpio.bsrr = value_write; 
+        return ; 
+    }
+    pub const set = write; 
+};
+
+comptime {
+    _ = Pin; 
+    _ = Pin.set; 
 }

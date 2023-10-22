@@ -31,6 +31,13 @@ pub fn build(b: *Builder) void {
         "zig-out/bin/zig-stm32-blink.elf", 
         "zig-out/bin/zig-stm32-blink.bin",
     }); 
+    const cpStep: *std.Build.Step.ObjCopy = b.addObjCopy(.{ .generated = elf.getEmittedBin().generated }, .{
+        .format = .bin, 
+        .basename = "bin",
+    } ); 
+    cpStep.step.dependOn(&artifact.step);
+    const bin2 = b.step("bin2", "test"); 
+    bin2.dependOn(&cpStep.step); 
     const bin_step : *std.build.Builder.Step = b.step("bin", "Generate binary file to be flashed");
     bin_step.dependOn(&cmd.step);
     cmd.step.dependOn(b.default_step); 
@@ -38,7 +45,6 @@ pub fn build(b: *Builder) void {
     const flash_cmd = b.addSystemCommand(&[_][]const u8{
         "st-flash",
         "write",
-        // b.getInstallPath(artifact.dest_dir, bin.dest_filename),
         "zig-out/bin/zig-stm32-blink.bin", 
         "0x8000000",
     });
